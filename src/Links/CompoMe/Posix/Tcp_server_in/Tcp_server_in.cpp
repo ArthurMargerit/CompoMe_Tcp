@@ -34,7 +34,7 @@ Tcp_server_in::Tcp_server_in()
              sizeof(int));
 }
 
-Tcp_server_in::~Tcp_server_in() { this->disconnect(); }
+Tcp_server_in::~Tcp_server_in() { this->main_disconnect(); }
 
 void Tcp_server_in::step() {
   Link::step();
@@ -70,7 +70,7 @@ void Tcp_server_in::step() {
   }
 
   if (this->fds[0].revents & POLLHUP) {
-    this->disconnect();
+    this->main_disconnect();
   }
 
   for (int i = 1; i < this->i_fds; i++) {
@@ -81,15 +81,14 @@ void Tcp_server_in::step() {
       buff[readden] = '\0';
 
       C_INFO_TAG("tcp,sexrver,recv", "call: \"\"", buff, "\"");
-      auto result_of_call =
-          CompoMe::Tools::call(&this->get_caller_stream(), std::string(buff));
+      auto result_of_call = this->get_main().call(std::string(buff));
 
       C_INFO_TAG("tcp,server,recv", "res: \"", result_of_call.second, "\"");
 
       ssize_t r = 0;
-      result_of_call.second += " "; // add a space to avoid empty message
-      r = send(fds[i].fd, result_of_call.second.c_str(),
-               result_of_call.second.length(), MSG_NOSIGNAL);
+      result_of_call.second.str += " "; // add a space to avoid empty message
+      r = send(fds[i].fd, result_of_call.second.str.c_str(),
+               result_of_call.second.str.length(), MSG_NOSIGNAL);
       if (r == -1) {
         C_ERROR_TAG("tcp,server,recv", "respond sending failled",
                     strerror(errno));
@@ -117,8 +116,8 @@ void Tcp_server_in::step() {
   }
 }
 
-void Tcp_server_in::connect() {
-  Link::connect();
+void Tcp_server_in::main_connect() {
+   Link::main_connect();
 
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
@@ -150,7 +149,7 @@ void Tcp_server_in::connect() {
     if (this->fds == nullptr) {
       C_ERROR("Malloc failed for fds size asked is ",
               (this->get_max_client() + 1) * sizeof(*this->fds));
-      this->disconnect();
+      this->main_disconnect();
       return;
     }
   }
@@ -158,7 +157,7 @@ void Tcp_server_in::connect() {
   {
     this->buff = (char *)malloc(sizeof(char) * this->get_max_request_size());
     if (this->buff == nullptr) {
-      this->disconnect();
+      this->main_disconnect();
       C_ERROR("malloc failled for buff");
     }
   }
@@ -171,8 +170,9 @@ void Tcp_server_in::connect() {
   }
 }
 
-void Tcp_server_in::disconnect() {
-  Link::disconnect();
+void Tcp_server_in::main_disconnect() { 
+  Link::main_disconnect();
+
   if (this->listening_socket != -1) {
     close(this->listening_socket);
     this->listening_socket = -1;
@@ -188,29 +188,6 @@ void Tcp_server_in::disconnect() {
 
   free(this->buff);
   this->buff = nullptr;
-}
-
-// Get and set /////////////////////////////////////////////////////////////
-
-CompoMe::String Tcp_server_in::get_addr() const { return this->addr; }
-
-void Tcp_server_in::set_addr(const CompoMe::String p_addr) {
-  this->addr = p_addr;
-}
-i32 Tcp_server_in::get_port() const { return this->port; }
-
-void Tcp_server_in::set_port(const i32 p_port) { this->port = p_port; }
-ui32 Tcp_server_in::get_max_client() const { return this->max_client; }
-
-void Tcp_server_in::set_max_client(const ui32 p_max_client) {
-  this->max_client = p_max_client;
-}
-ui32 Tcp_server_in::get_max_request_size() const {
-  return this->max_request_size;
-}
-
-void Tcp_server_in::set_max_request_size(const ui32 p_max_request_size) {
-  this->max_request_size = p_max_request_size;
 }
 
 } // namespace Posix
