@@ -33,6 +33,14 @@ public:
   void main_connect() override;
   void main_disconnect() override;
 
+  // one connect
+  void one_connect(CompoMe::Require_helper &, CompoMe::String c) override;
+  void one_connect(CompoMe::Interface &, CompoMe::String) override;
+
+  // one disconnect
+  void one_disconnect(CompoMe::Require_helper &, CompoMe::String) override;
+  void one_disconnect(CompoMe::Interface &, CompoMe::String) override;
+
   // Get and set /////////////////////////////////////////////////////////////
 
   CompoMe::String get_addr() const;
@@ -62,6 +70,7 @@ private:
   struct pollfd *fds;
   ui32 i_fds;
   char *buff;
+
   // DATA ////////////////////////////////////////////////////////////////////
   CompoMe::String addr;
   i32 port;

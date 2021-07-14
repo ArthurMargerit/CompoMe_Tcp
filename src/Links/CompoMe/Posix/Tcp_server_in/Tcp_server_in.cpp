@@ -2,36 +2,27 @@
 #include "CompoMe/Log.hpp"
 #include "CompoMe/Tools/Call.hpp"
 #include "Interfaces/Interface.hpp"
-
 #include <arpa/inet.h>
 #include <errno.h>
+#include <iostream>
 #include <netinet/in.h>
-
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
-
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
 
 namespace CompoMe {
 
 namespace Posix {
 
 Tcp_server_in::Tcp_server_in()
-    : CompoMe::Link(), listening_socket(-1), fds(nullptr), i_fds(0),
-      buff(nullptr) {
-  this->listening_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (listening_socket == -1) {
-    C_ERROR("socket() failed");
-    return;
-  }
-
-  int enable = 1;
-  setsockopt(this->listening_socket, SOL_SOCKET, SO_REUSEADDR, &enable,
-             sizeof(int));
+    : CompoMe::Link(), main(), many(), addr("127.0.0.1"), port(80), i_fds(0),
+      fds(nullptr) {
+  this->main.set_link(*this);
+  this->many.set_link(*this);
 }
 
 Tcp_server_in::~Tcp_server_in() { this->main_disconnect(); }
@@ -39,7 +30,7 @@ Tcp_server_in::~Tcp_server_in() { this->main_disconnect(); }
 void Tcp_server_in::step() {
   Link::step();
 
-  int ret = poll(fds, this->i_fds, 0);
+  int ret = poll(this->fds, this->i_fds, 0);
 
   if (ret == 0) {
     // C_DEBUG("Timeout Poll() on socket");
@@ -50,6 +41,9 @@ void Tcp_server_in::step() {
     C_ERROR("Error in Poll() on socket");
     return;
   }
+
+  std::cout << "step"
+            << "\n";
 
   // socket message
   // if it's the listening_socket manage the new connection
@@ -117,7 +111,17 @@ void Tcp_server_in::step() {
 }
 
 void Tcp_server_in::main_connect() {
-   Link::main_connect();
+  Link::main_connect();
+
+  this->listening_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (listening_socket == -1) {
+    C_ERROR("socket() failed");
+    return;
+  }
+
+  int enable = 1;
+  setsockopt(this->listening_socket, SOL_SOCKET, SO_REUSEADDR, &enable,
+             sizeof(int));
 
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
@@ -128,7 +132,7 @@ void Tcp_server_in::main_connect() {
                   sizeof(struct sockaddr));
 
     if (0 > r) {
-      C_ERROR("bind at ", this->get_addr(), ":", this->get_port(),
+      C_ERROR("bind at ", this->get_addr().str, ":", this->get_port(),
               " failed :", strerror(errno));
       return;
     }
@@ -170,7 +174,7 @@ void Tcp_server_in::main_connect() {
   }
 }
 
-void Tcp_server_in::main_disconnect() { 
+void Tcp_server_in::main_disconnect() {
   Link::main_disconnect();
 
   if (this->listening_socket != -1) {
@@ -189,6 +193,20 @@ void Tcp_server_in::main_disconnect() {
   free(this->buff);
   this->buff = nullptr;
 }
+
+// one connect
+void Tcp_server_in::one_connect(CompoMe::Require_helper &p_r,
+                                CompoMe::String p_key) {}
+
+void Tcp_server_in::one_connect(CompoMe::Interface &p_i,
+                                CompoMe::String p_key) {}
+
+// one disconnect
+void Tcp_server_in::one_disconnect(CompoMe::Require_helper &p_r,
+                                   CompoMe::String p_key) {}
+
+void Tcp_server_in::one_disconnect(CompoMe::Interface &p_i,
+                                   CompoMe::String p_key) {}
 
 } // namespace Posix
 

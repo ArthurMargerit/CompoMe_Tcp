@@ -3,10 +3,9 @@
 #include "Data/CompoMe_Tcp.hpp"
 
 #include "Links/Link.hpp"
-
+#include "Links/CompoMe/Posix/Fake_pack.hpp"
 // TYPES
 
-#include "Data/CompoMe_Tcp.hpp"
 #include "Types/CompoMe/String.hpp"
 
 #include "Types/i32.hpp"
@@ -31,6 +30,14 @@ public:
   void main_connect() override;
   void main_disconnect() override;
 
+  // one connect
+  void one_connect(CompoMe::Require_helper &, CompoMe::String c) override;
+  void one_connect(CompoMe::Interface &, CompoMe::String) override;
+
+  // one disconnect
+  void one_disconnect(CompoMe::Require_helper &, CompoMe::String) override;
+  void one_disconnect(CompoMe::Interface &, CompoMe::String) override;
+
   // Get and set /////////////////////////////////////////////////////////////
 
   CompoMe::String get_addr() const;
@@ -52,13 +59,12 @@ public:
   CompoMe::Stream::map_out &get_out();
 
 public:
-  int get_sock() { return this->sock; }
   // Function
   // ///////////////////////////////////////////////////////////////////
 
 private:
-  int sock;
-  CompoMe::Fake_stream *f;
+  i32 sockfd;
+  std::map<CompoMe::String, struct CompoMe::Posix::Fake_pack> fake_many;
 
   // DATA ////////////////////////////////////////////////////////////////////
   CompoMe::String addr;
